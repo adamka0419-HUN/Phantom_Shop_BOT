@@ -3,7 +3,6 @@ import asyncio
 import discord
 from discord.ext import commands
 
-# 1. Bot (Shop / Ticket / Setup / Clear) beállítása
 intents_bot1 = discord.Intents.default()
 intents_bot1.message_content = True
 intents_bot1.guilds = True
@@ -14,13 +13,12 @@ bot1 = commands.Bot(command_prefix="!", intents=intents_bot1)
 async def on_ready():
     print(f"Shop/Ticket bot sikeresen bejelentkezett mint {bot1.user}")
 
-# --- 1. ÖSSZES CSATORNA TÖRLÉSE (!clear_all) ---
+# --- 1. CSATORNÁK TÖRLÉSE (!clear_all) ---
 @bot1.command(name="clear_all")
 @commands.has_permissions(administrator=True)
 async def clear_all(ctx):
     guild = ctx.guild
-    await ctx.send("⚠️ *Minden csatorna és kategória törlése folyamatban...*", delete_after=5)
-
+    await ctx.send("⚠️ *Minden csatorna törlése folyamatban...*", delete_after=5)
     try:
         for channel in guild.channels:
             try:
@@ -29,20 +27,29 @@ async def clear_all(ctx):
                 print(f"Nem sikerült törölni ({channel.name}): {e}")
         print("Minden csatorna sikeresen törölve!")
     except Exception as e:
-        print(f"Hiba történt a törlés során: {e}")
+        print(f"Hiba: {e}")
 
-# --- 2. EGYEDI SZERVER FELÉPÍTÉSE (!setup) ---
+# --- 2. RANGOK ÉS SZERVER LÉTREHOZÁSA (!setup) ---
 @bot1.command(name="setup")
 @commands.has_permissions(administrator=True)
 async def setup(ctx):
     guild = ctx.guild
-    await ctx.send("⏳ *A szerver egyedi felépítése megkezdődött...*", delete_after=10)
-
-    overwrites_locked = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False)
-    }
+    await ctx.send("⏳ *A rangok és a szerver felépítése megkezdődött...*", delete_after=10)
 
     try:
+        # --- RANGOK LÉTREHOZÁSA ---
+        role_owner = await guild.create_role(name="👑 ── TULAJDONOS ──", color=discord.Color.red(), permissions=discord.Permissions.all())
+        role_admin = await guild.create_role(name="🛡️ ── ADMIN ──", color=discord.Color.orange(), permissions=discord.Permissions(administrator=True))
+        role_mod = await guild.create_role(name="🔨 ── MODERÁTOR ──", color=discord.Color.blue(), permissions=discord.Permissions(manage_messages=True, kick_members=True, ban_members=True))
+        role_partner = await guild.create_role(name="🤝 ── PARTNER ──", color=discord.Color.purple())
+        role_vip = await guild.create_role(name="💎 ── VIP VÁSÁRLÓ ──", color=discord.Color.gold())
+        role_customer = await guild.create_role(name="👅 ── CUSTOMER ──", color=discord.Color.green())
+
+        # --- CSATORNÁK LÉTREHOZÁSA ---
+        overwrites_locked = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False)
+        }
+
         # 1. SERVER STATS
         cat1 = await guild.create_category("📊 ── SERVER STATS ──")
         await guild.create_text_channel("┌───≪•◦•≫───┐", category=cat1, overwrites=overwrites_locked)
@@ -71,7 +78,6 @@ async def setup(ctx):
 
         # 4. HELP
         cat4 = await guild.create_category("💥 ── HELP ──")
-        await guild.create_text_channel("oldclaim-key", category=cat4)
         await guild.create_text_channel("╭・🚀 find", category=cat4)
         await guild.create_text_channel("┣・❓ redeem", category=cat4)
         await guild.create_text_channel("┣・❓ faq", category=cat4)
@@ -98,7 +104,7 @@ async def setup(ctx):
         await guild.create_text_channel("┣・✨ inv-r3w4rds", category=cat6)
         await guild.create_text_channel("╰・💎 b00st-r3w4rds", category=cat6)
 
-        # 7. CLIENTS (Vouchoknak)
+        # 7. CLIENTS
         cat7 = await guild.create_category("💜 ── CLIENTS ──")
         await guild.create_text_channel("┣・💜 v0uch", category=cat7)
         await guild.create_text_channel("╰・💬 chat", category=cat7)
@@ -107,24 +113,18 @@ async def setup(ctx):
         cat8 = await guild.create_category("👥 ── PARTNERS ──")
         await guild.create_text_channel("╭・💖 promotion", category=cat8)
 
-        await ctx.send("✅ **A szerver egyedi stílusban sikeresen felépült!**")
+        await ctx.send("✅ **A rangok és a szerver egyedi stílusban sikeresen felépültek!**")
     except Exception as e:
         await ctx.send(f"❌ Hiba történt: {e}")
 
 # Shop parancs
 @bot1.command(name="shop")
 async def shop(ctx):
-    embed = discord.Embed(
-        title="🛒 Phantom Shop - Termékek",
-        description="Válassz alábbi kínálatunkból:",
-        color=discord.Color.green()
-    )
-    embed.add_field(name="📦 Termék 1", value="Leírás vagy árak itt... - **1000 Ft**", inline=False)
-    embed.add_field(name="📦 Termék 2", value="Leírás vagy árak itt... - **2500 Ft**", inline=False)
-    embed.set_footer(text="Vásárláshoz nyiss ticketet a !ticket paranccsal!")
+    embed = discord.Embed(title="🛒 Phantom Shop - Termékek", description="Válassz kínálatunkból:", color=discord.Color.green())
+    embed.add_field(name="📦 Termék 1", value="Leírás... - **1000 Ft**", inline=False)
     await ctx.send(embed=embed)
 
-# Ticket nyitó gomb nézet
+# Ticket View & Command
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -138,27 +138,21 @@ class TicketView(discord.ui.View):
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
         }
         channel = await guild.create_text_channel(f"ticket-{interaction.user.name}", overwrites=overwrites)
-        await interaction.response.send_message(f"Sikeresen létrehoztam a ticketedet: {channel.mention}", ephemeral=True)
-        await channel.send(f"Üdvözöllek {interaction.user.mention}! A tulajdonos hamarosan válaszol. Írd meg miben segíthetünk.")
+        await interaction.response.send_message(f"Sikeresen létrehoztam: {channel.mention}", ephemeral=True)
 
 @bot1.command(name="ticket")
 async def ticket(ctx):
-    embed = discord.Embed(
-        title="🎫 Ticket Rendszer",
-        description="Kattints az alábbi gombra, ha vásárolni szeretnél vagy hibát szeretnél jelezni!",
-        color=discord.Color.blue()
-    )
+    embed = discord.Embed(title="🎫 Ticket Rendszer", description="Kattints a gombra a vásárláshoz!", color=discord.Color.blue())
     await ctx.send(embed=embed, view=TicketView())
 
-
-# 2. Bot (Vouch / Rep) beállítása
+# 2. Bot (Vouch)
 intents_bot2 = discord.Intents.default()
 intents_bot2.message_content = True
 bot2 = commands.Bot(command_prefix="!", intents=intents_bot2)
 
 @bot2.event
 async def on_ready():
-    print(f"Vouch/Rep bot sikeresen bejelentkezett mint {bot2.user}")
+    print(f"Vouch bot bejelentkezett mint {bot2.user}")
 
 @bot2.command(name="vouch")
 async def vouch(ctx, *, text: str):
@@ -166,31 +160,18 @@ async def vouch(ctx, *, text: str):
         await ctx.message.delete()
     except:
         pass
-
-    embed = discord.Embed(
-        title="🌟 Új Vouch / Értékelés!",
-        description=text,
-        color=discord.Color.gold()
-    )
+    embed = discord.Embed(title="🌟 Új Vouch / Értékelés!", description=text, color=discord.Color.gold())
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
-    embed.set_footer(text="Köszönjük a bizalmat!")
     await ctx.send(embed=embed)
 
-
-# Fő futtató függvény a két bot párhuzamos indításához
 async def main():
     token1 = os.getenv("DISCORD_TOKEN")
     token2 = os.getenv("DISCORD_TOKEN_2")
-
     if not token1 or not token2:
-        print("HIBA: A DISCORD_TOKEN vagy a DISCORD_TOKEN_2 nincs beállítva a környezeti változók között!")
+        print("HIBA: Hiányzó tokenek!")
         return
-
     async with bot1, bot2:
-        await asyncio.gather(
-            bot1.start(token1),
-            bot2.start(token2)
-        )
+        await asyncio.gather(bot1.start(token1), bot2.start(token2))
 
 if __name__ == "__main__":
     asyncio.run(main())
