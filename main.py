@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
+# 1. Bot (Shop / Ticket / Setup / Clear) beállítása
 intents_bot1 = discord.Intents.default()
 intents_bot1.message_content = True
 intents_bot1.guilds = True
@@ -13,7 +14,7 @@ bot1 = commands.Bot(command_prefix="!", intents=intents_bot1)
 async def on_ready():
     print(f"Shop/Ticket bot sikeresen bejelentkezett mint {bot1.user}")
 
-# --- ÖSSZES CSATORNA ÉS KATEGÓRIA TÖRLÉSE (!clear_all) ---
+# --- 1. ÖSSZES CSATORNA TÖRLÉSE (!clear_all) ---
 @bot1.command(name="clear_all")
 @commands.has_permissions(administrator=True)
 async def clear_all(ctx):
@@ -21,16 +22,94 @@ async def clear_all(ctx):
     await ctx.send("⚠️ *Minden csatorna és kategória törlése folyamatban...*", delete_after=5)
 
     try:
-        # Először töröljük az összes csatornát
         for channel in guild.channels:
             try:
                 await channel.delete()
             except Exception as e:
-                print(f"Nem sikerült törölni a csatornát ({channel.name}): {e}")
-
+                print(f"Nem sikerült törölni ({channel.name}): {e}")
         print("Minden csatorna sikeresen törölve!")
     except Exception as e:
         print(f"Hiba történt a törlés során: {e}")
+
+# --- 2. EGYEDI SZERVER FELÉPÍTÉSE (!setup) ---
+@bot1.command(name="setup")
+@commands.has_permissions(administrator=True)
+async def setup(ctx):
+    guild = ctx.guild
+    await ctx.send("⏳ *A szerver egyedi felépítése megkezdődött...*", delete_after=10)
+
+    overwrites_locked = {
+        guild.default_role: discord.PermissionOverwrite(read_messages=True, send_messages=False)
+    }
+
+    try:
+        # 1. SERVER STATS
+        cat1 = await guild.create_category("📊 ── SERVER STATS ──")
+        await guild.create_text_channel("┌───≪•◦•≫───┐", category=cat1, overwrites=overwrites_locked)
+        await guild.create_text_channel("👤・all-members", category=cat1, overwrites=overwrites_locked)
+        await guild.create_text_channel("👤・members", category=cat1, overwrites=overwrites_locked)
+        await guild.create_text_channel("👅・customer", category=cat1, overwrites=overwrites_locked)
+        await guild.create_text_channel("🛒・phantomshop.site", category=cat1, overwrites=overwrites_locked)
+        await guild.create_text_channel("└───≪•◦•≫───┘", category=cat1, overwrites=overwrites_locked)
+
+        # 2. WELCOME
+        cat2 = await guild.create_category("📌 ── WELCOME ──")
+        await guild.create_text_channel("╭・🌐 join", category=cat2)
+        await guild.create_text_channel("┣・🌐 invites", category=cat2)
+        await guild.create_text_channel("┣・🌐 b00st", category=cat2)
+        await guild.create_text_channel("╰・⚠️ backup", category=cat2)
+
+        # 3. DETECTION
+        cat3 = await guild.create_category("🎯 ── DETECTION ──")
+        await guild.create_text_channel("oldclaim", category=cat3)
+        await guild.create_text_channel("╭・⏱️ queue", category=cat3)
+        await guild.create_text_channel("┣・🎯 claims", category=cat3)
+        await guild.create_text_channel("┣・🔔 claim-ping", category=cat3)
+        await guild.create_text_channel("┣・🏦 bank", category=cat3)
+        await guild.create_text_channel("┣・⭐ r3seller", category=cat3)
+        await guild.create_text_channel("╰・🛒 cla1ms-b4y", category=cat3)
+
+        # 4. HELP
+        cat4 = await guild.create_category("💥 ── HELP ──")
+        await guild.create_text_channel("oldclaim-key", category=cat4)
+        await guild.create_text_channel("╭・🚀 find", category=cat4)
+        await guild.create_text_channel("┣・❓ redeem", category=cat4)
+        await guild.create_text_channel("┣・❓ faq", category=cat4)
+        await guild.create_text_channel("┣・❓ r3seller-faq", category=cat4)
+        await guild.create_text_channel("╰・❓ redeem-key", category=cat4)
+
+        # 5. TICKET
+        cat5 = await guild.create_category("💌 ── TICKET ──")
+        await guild.create_text_channel("╭・💗 ticket", category=cat5)
+        await guild.create_text_channel("┣・⭐ ticket-review", category=cat5)
+        await guild.create_text_channel("╰・🛒 ord3rs", category=cat5)
+
+        # 6. GENERAL
+        cat6 = await guild.create_category("💬 ── GENERAL ──")
+        await guild.create_text_channel("╭・🔔 announcements", category=cat6)
+        await guild.create_text_channel("┣・📦 r3st0ck", category=cat6)
+        await guild.create_text_channel("┣・🛒 pr0duct-list", category=cat6)
+        await guild.create_text_channel("┣・💸 paym3nts", category=cat6)
+        await guild.create_text_channel("┣・🎁 giveaway", category=cat6)
+        await guild.create_text_channel("┣・📖 rul3s", category=cat6, overwrites=overwrites_locked)
+        await guild.create_text_channel("┣・🔑 r3s3ller", category=cat6)
+        await guild.create_text_channel("┣・💬 public-chat", category=cat6)
+        await guild.create_text_channel("┣・🤖 bot-cmds", category=cat6)
+        await guild.create_text_channel("┣・✨ inv-r3w4rds", category=cat6)
+        await guild.create_text_channel("╰・💎 b00st-r3w4rds", category=cat6)
+
+        # 7. CLIENTS (Vouchoknak)
+        cat7 = await guild.create_category("💜 ── CLIENTS ──")
+        await guild.create_text_channel("┣・💜 v0uch", category=cat7)
+        await guild.create_text_channel("╰・💬 chat", category=cat7)
+
+        # 8. PARTNERS
+        cat8 = await guild.create_category("👥 ── PARTNERS ──")
+        await guild.create_text_channel("╭・💖 promotion", category=cat8)
+
+        await ctx.send("✅ **A szerver egyedi stílusban sikeresen felépült!**")
+    except Exception as e:
+        await ctx.send(f"❌ Hiba történt: {e}")
 
 # Shop parancs
 @bot1.command(name="shop")
@@ -104,7 +183,7 @@ async def main():
     token2 = os.getenv("DISCORD_TOKEN_2")
 
     if not token1 or not token2:
-        print("HIBA: A DISCORD_TOKEN vagy a `DISCORD_TOKEN_2` nincs beállítva a környezeti változók között!")
+        print("HIBA: A DISCORD_TOKEN vagy a DISCORD_TOKEN_2 nincs beállítva a környezeti változók között!")
         return
 
     async with bot1, bot2:
