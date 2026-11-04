@@ -6,6 +6,8 @@ from discord.ext import commands
 # 1. Bot (Shop / Ticket / Stats) beállítása
 intents_bot1 = discord.Intents.default()
 intents_bot1.message_content = True
+intents_bot1.guilds = True
+intents_bot1.members = True
 bot1 = commands.Bot(command_prefix="!", intents=intents_bot1)
 
 @bot1.event
@@ -14,7 +16,42 @@ async def on_ready():
 
 @bot1.command(name="shop")
 async def shop(ctx):
-    await ctx.send("Itt találod a Shop menüt!")
+    embed = discord.Embed(
+        title="🛒 Phantom Shop - Termékek",
+        description="Válassz alábbi kínálatunkból:",
+        color=discord.Color.green()
+    )
+    embed.add_field(name="📦 Termék 1", value="Leírás vagy árak itt... - **1000 Ft**", inline=False)
+    embed.add_field(name="📦 Termék 2", value="Leírás vagy árak itt... - **2500 Ft**", inline=False)
+    embed.set_footer(text="Vásárláshoz nyiss ticketet a !ticket paranccsal!")
+    await ctx.send(embed=embed)
+
+# Ticket nyitó gomb nézet
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="🎫 Ticket nyitása", style=discord.ButtonStyle.blurple, custom_id="open_ticket")
+    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = interaction.guild
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            interaction.user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        }
+        # Létrehoz egy privát szobát a felhasználónak
+        channel = await guild.create_text_channel(f"ticket-{interaction.user.name}", overwrites=overwrites)
+        await interaction.response.send_message(f"Sikeresen létrehoztam a ticketedet: {channel.mention}", ephemeral=True)
+        await channel.send(f"Üdvözöllek {interaction.user.mention}! A tulajdonos hamarosan válaszol. Írd meg miben segíthetünk.")
+
+@bot1.command(name="ticket")
+async def ticket(ctx):
+    embed = discord.Embed(
+        title="🎫 Ticket Rendszer",
+        description="Kattints az alábbi gombra, ha vásárolni szeretnél vagy hibát szeretnél jelezni!",
+        color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed, view=TicketView())
 
 
 # 2. Bot (Vouch / Rep) beállítása
@@ -28,7 +65,20 @@ async def on_ready():
 
 @bot2.command(name="vouch")
 async def vouch(ctx, *, text: str):
-    await ctx.send(f"Köszönjük a vouchot! Értékelés: {text}")
+    # Töröljük az eredeti parancsot, hogy tiszta maradjon a chat
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    embed = discord.Embed(
+        title="🌟 Új Vouch / Értékelés!",
+        description=text,
+        color=discord.Color.gold()
+    )
+    embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+    embed.set_footer(text="Köszönjük a bizalmat!")
+    await ctx.send(embed=embed)
 
 
 # Fő futtató függvény a két bot párhuzamos indításához
